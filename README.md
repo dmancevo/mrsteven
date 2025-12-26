@@ -16,9 +16,10 @@ A social deduction party game built with FastAPI, HTMX, Tailwind CSS, and DaisyU
 3. **Join Lobby**: Players enter their nicknames to join the game
 4. **Start Game**: Host starts when everyone has joined
 5. **Roles Assigned**: Each player sees their role and word (Dragon sees "???")
-6. **Discussion Phase**: Players discuss to figure out who the Dragon is
-7. **Voting Phase**: Host initiates voting, everyone votes to eliminate a player
-8. **Win Conditions**:
+6. **Say a Word**: Each player takes turns saying ONE word that is similar to their secret word (but NOT the actual word itself). The Dragon must try to blend in by guessing what the word might be!
+7. **Discussion Phase**: Players discuss and analyze the words that were said to figure out who the Dragon is
+8. **Voting Phase**: Host initiates voting, everyone votes to eliminate a player
+9. **Win Conditions**:
    - **Villagers/Knights win** if they eliminate the Dragon
    - **Dragon wins** if they survive until ≤2 players remain OR correctly guess the word after elimination
 
