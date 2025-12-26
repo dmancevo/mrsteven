@@ -2,6 +2,8 @@
 
 A social deduction party game built with FastAPI, HTMX, Tailwind CSS, and DaisyUI. Inspired by the classic "Mr. White" game, players must work together to identify the Dragon among them!
 
+**🎮 [Play Now at dragonseeker.win](https://dragonseeker.win/)**
+
 ## 🎯 Game Overview
 
 **Dragonseeker** is a real-time multiplayer social deduction game where players are assigned secret roles:
@@ -233,7 +235,9 @@ Contributions are welcome! Feel free to:
 
 ## 🎮 Play Now!
 
-Start the server and visit http://localhost:8000 to begin playing!
+**Play the live game at [dragonseeker.win](https://dragonseeker.win/)!**
+
+Or run locally by starting the server and visiting http://localhost:8000:
 
 ```bash
 cd app
