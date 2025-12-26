@@ -133,17 +133,17 @@
                     <div id="vote-buttons" class="space-y-2">
                         {% for p in game.players.values() %}
                         {% if p.is_alive and p.id != player_id %}
-                        <button
-                            hx-post="/api/games/{{ game.game_id }}/vote?player_id={{ player_id }}"
-                            hx-vals='{"target_id": "{{ p.id }}"}'
-                            class="btn btn-outline btn-error btn-block justify-start">
-                            <span class="avatar placeholder">
-                                <div class="bg-primary text-primary-content rounded-full w-8">
-                                    <span class="text-sm">{{ p.nickname[0]|upper }}</span>
-                                </div>
-                            </span>
-                            Vote for {{ p.nickname }}
-                        </button>
+                        <form hx-post="/api/games/{{ game.game_id }}/vote?player_id={{ player_id }}">
+                            <input type="hidden" name="target_id" value="{{ p.id }}">
+                            <button type="submit" class="btn btn-outline btn-error btn-block justify-start">
+                                <span class="avatar placeholder">
+                                    <div class="bg-primary text-primary-content rounded-full w-8">
+                                        <span class="text-sm">{{ p.nickname[0]|upper }}</span>
+                                    </div>
+                                </span>
+                                Vote for {{ p.nickname }}
+                            </button>
+                        </form>
                         {% endif %}
                         {% endfor %}
                     </div>

@@ -148,6 +148,11 @@ class GameWebSocket {
             updateStatusBar(state.state);
         }
 
+        // Update start button if function exists (lobby page)
+        if (typeof updateStartButton === 'function' && state.can_start !== undefined) {
+            updateStartButton(state.can_start);
+        }
+
         // Handle vote status
         if (state.has_voted) {
             const voteButtons = document.getElementById('vote-buttons');

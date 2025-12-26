@@ -97,7 +97,7 @@ async def start_voting(game_id: str, player_id: str = Query(...)):
 
 
 @router.post("/api/games/{game_id}/vote")
-async def submit_vote(game_id: str, vote: VoteRequest, player_id: str = Query(...), response: Response = None):
+async def submit_vote(game_id: str, target_id: str = Form(...), player_id: str = Query(...), response: Response = None):
     """Submit a vote for player elimination.
 
     Args:
@@ -123,7 +123,7 @@ async def submit_vote(game_id: str, vote: VoteRequest, player_id: str = Query(..
 
     # Submit the vote
     try:
-        game.submit_vote(player_id, vote.target_id)
+        game.submit_vote(player_id, target_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
