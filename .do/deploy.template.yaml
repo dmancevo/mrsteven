@@ -1,0 +1,8 @@
+spec:
+  name: DigitalOceanFastAPITemplateApp
+  services:
+  - dockerfile_path: Dockerfile
+    git:
+      branch: main
+      repo_clone_url: https://github.com/dmancevo/DigitalOceanFastAPITemplateApp.git
+    name: DigitalOceanFastAPITemplateApp
