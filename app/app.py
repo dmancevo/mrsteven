@@ -1,4 +1,4 @@
-"""Main FastAPI application for Villagers, Knights & Dragon game."""
+"""Main FastAPI application for Dragonseeker game."""
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -9,7 +9,7 @@ from core.game_manager import game_manager
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Villagers, Knights & Dragon",
+    title="Dragonseeker",
     description="A social deduction party game",
     version="1.0.0"
 )
@@ -56,7 +56,7 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     """Run on application startup."""
-    print("🎮 Villagers, Knights & Dragon game server starting...")
+    print("🎮 Dragonseeker game server starting...")
     print("🔗 Game manager initialized")
 
 

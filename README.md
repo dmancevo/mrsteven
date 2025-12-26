@@ -1,10 +1,10 @@
-# 🎮 Villagers, Knights & Dragon
+# 🎮 Dragonseeker
 
 A social deduction party game built with FastAPI, HTMX, Tailwind CSS, and DaisyUI. Inspired by the classic "Mr. White" game, players must work together to identify the Dragon among them!
 
 ## 🎯 Game Overview
 
-**Villagers, Knights & Dragon** is a real-time multiplayer social deduction game where players are assigned secret roles:
+**Dragonseeker** is a real-time multiplayer social deduction game where players are assigned secret roles:
 - **Villagers**: Know the secret word and must identify the Dragon
 - **Knights**: Know a similar (but different) word and must identify the Dragon. Knights don't know they are knights - they think they are villagers!
 - **Dragon**: Doesn't know the word and must blend in to survive
@@ -152,8 +152,8 @@ LOBBY → (host starts) → PLAYING → (host votes) → VOTING
 The project includes a Dockerfile for containerized deployment:
 
 ```bash
-docker build -t villagers-knights-dragon .
-docker run -p 8000:8000 villagers-knights-dragon
+docker build -t dragonseeker .
+docker run -p 8000:8000 dragonseeker
 ```
 
 ### Digital Ocean App Platform
