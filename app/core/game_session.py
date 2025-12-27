@@ -46,6 +46,10 @@ class GameSession:
         self.last_elimination: dict | None = None  # Stores last elimination details
         self.player_order: list[str] = []  # Shuffled order of player IDs for turn order
 
+        # Voting timer settings
+        self.voting_timer_seconds: int | None = None  # Timer duration (30-180), None = disabled
+        self.voting_started_at: datetime | None = None  # When voting started (for time calculation)
+
     def add_player(self, nickname: str) -> Player:
         """Add a new player to the game.
 
@@ -90,6 +94,39 @@ class GameSession:
             True if minimum players requirement is met
         """
         return len(self.players) >= MIN_PLAYERS
+
+    def set_voting_timer(self, seconds: int | None) -> None:
+        """Set voting timer duration for all rounds.
+
+        Args:
+            seconds: Timer duration (30-180) or None to disable
+
+        Raises:
+            ValueError: If game not in lobby or invalid timer value
+        """
+        if self.state != GameState.LOBBY:
+            raise ValueError("Can only set timer in lobby")
+
+        if seconds is not None and not (30 <= seconds <= 180):
+            raise ValueError("Timer must be between 30 and 180 seconds")
+
+        self.voting_timer_seconds = seconds
+
+    def get_voting_time_remaining(self) -> int | None:
+        """Calculate remaining voting time in seconds.
+
+        Returns:
+            Seconds remaining, or None if no timer active
+        """
+        if not self.voting_timer_seconds or not self.voting_started_at:
+            return None
+
+        from datetime import datetime
+
+        elapsed = (datetime.now() - self.voting_started_at).total_seconds()
+        remaining = int(self.voting_timer_seconds - elapsed)
+
+        return max(0, remaining)  # Don't return negative values
 
     def start_game(self) -> None:
         """Start the game by assigning roles and selecting a word.
@@ -239,6 +276,7 @@ class GameSession:
             "has_voted": player_id in self.votes,
             "last_elimination": self.last_elimination,
             "player_order": self.player_order,  # Turn order for word-saying phase
+            "voting_timer_seconds": self.voting_timer_seconds,
         }
 
         if self.state == GameState.FINISHED:

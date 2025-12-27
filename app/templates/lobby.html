@@ -68,6 +68,32 @@
             <h2 class="card-title">Ready to Start?</h2>
             <p class="text-sm text-base-content/70">Make sure all players have joined before starting the game.</p>
 
+            <!-- Voting Timer Setting -->
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Voting Timer (Optional)</span>
+                    <span class="label-text-alt">Time limit for each voting round</span>
+                </label>
+                <select
+                    id="voting-timer-select"
+                    class="select select-bordered w-full"
+                    onchange="updateTimerSetting()">
+                    <option value="">No Timer</option>
+                    <option value="30">30 seconds</option>
+                    <option value="45">45 seconds</option>
+                    <option value="60">1 minute</option>
+                    <option value="90">1.5 minutes</option>
+                    <option value="120">2 minutes</option>
+                    <option value="150">2.5 minutes</option>
+                    <option value="180">3 minutes</option>
+                </select>
+                <label class="label">
+                    <span class="label-text-alt text-base-content/70">
+                        Timer applies to ALL voting rounds. If timer expires without majority, no elimination occurs.
+                    </span>
+                </label>
+            </div>
+
             <div class="card-actions justify-end mt-4">
                 <button
                     id="start-game-btn"
@@ -114,6 +140,30 @@ function copyShareLink() {
         btn.textContent = originalText;
         btn.classList.remove('btn-success');
     }, 2000);
+}
+
+function updateTimerSetting() {
+    const select = document.getElementById('voting-timer-select');
+    const value = select.value;
+    const timerSeconds = value ? parseInt(value) : null;
+
+    const gameId = '{{ game.game_id }}';
+    const playerId = '{{ player_id }}';
+
+    fetch(`/api/games/${gameId}/set-timer?player_id=${playerId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ timer_seconds: timerSeconds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Timer setting saved:', data);
+    })
+    .catch(error => {
+        console.error('Error setting timer:', error);
+    });
 }
 
 function updatePlayerList(players) {

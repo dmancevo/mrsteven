@@ -1,0 +1,33 @@
+<!-- Timer display partial - polled by HTMX every second -->
+{% if show_timer and time_remaining is not none %}
+<div id="timer-display"
+     class="alert {% if time_remaining <= 10 %}alert-error{% else %}alert-warning{% endif %} mb-4"
+     hx-get="/api/games/{{ game_id }}/timer?player_id={{ player_id }}"
+     hx-trigger="every 1s"
+     hx-swap="outerHTML">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <div>
+        <div class="font-bold">Time Remaining</div>
+        <div class="text-2xl font-mono">{{ minutes }}:{{ seconds }}</div>
+    </div>
+</div>
+{% elif expired %}
+<div id="timer-display"
+     class="alert alert-error mb-4"
+     hx-get="/api/games/{{ game_id }}/timer?player_id={{ player_id }}"
+     hx-trigger="every 1s"
+     hx-swap="outerHTML">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>Voting timer expired! No elimination. Returning to discussion...</span>
+</div>
+{% else %}
+<div id="timer-display" style="display: none;"
+     hx-get="/api/games/{{ game_id }}/timer?player_id={{ player_id }}"
+     hx-trigger="every 1s"
+     hx-swap="outerHTML">
+</div>
+{% endif %}

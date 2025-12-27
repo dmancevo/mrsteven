@@ -95,3 +95,43 @@ async def start_game(game_id: str, response: Response, player_id: str = Query(..
     response.headers["HX-Redirect"] = f"/game/{game_id}/play?player_id={player_id}"
 
     return {"status": "started", "game_id": game_id}
+
+
+@router.post("/api/games/{game_id}/set-timer")
+async def set_timer(game_id: str, request: Request, player_id: str = Query(...)):
+    """Set voting timer for all rounds (host only).
+
+    Args:
+        game_id: The game session ID
+        request: Request with timer_seconds in JSON body
+        player_id: The player's ID (must be host)
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If validation fails
+    """
+    game = game_manager.get_game(game_id)
+
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    player = game.players.get(player_id)
+
+    if not player or not player.is_host:
+        raise HTTPException(status_code=403, detail="Only host can set timer")
+
+    body = await request.json()
+    timer_seconds = body.get("timer_seconds")
+
+    print(f"⏱️ Setting timer for game {game_id}: {timer_seconds}s")
+
+    try:
+        game.set_voting_timer(timer_seconds)
+        print(f"⏱️ Timer set successfully: game.voting_timer_seconds = {game.voting_timer_seconds}")
+    except ValueError as e:
+        print(f"⏱️ Timer validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return {"status": "timer_set", "timer_seconds": timer_seconds}

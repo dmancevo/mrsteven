@@ -2,7 +2,7 @@
  * HTMX configuration and event handlers
  */
 
-// Configure HTMX
+// Configure HTMX and event handlers when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('HTMX config loading...');
 
@@ -13,53 +13,53 @@ document.addEventListener('DOMContentLoaded', function() {
     htmx.config.wsReconnectDelay = 'full-jitter';
 
     console.log('HTMX configured successfully');
-});
 
-// Global HTMX event handlers
-document.body.addEventListener('htmx:configRequest', function(event) {
-    // Add any custom headers here if needed
-    // event.detail.headers['X-Custom-Header'] = 'value';
-});
+    // Global HTMX event handlers
+    document.body.addEventListener('htmx:configRequest', function(event) {
+        // Add any custom headers here if needed
+        // event.detail.headers['X-Custom-Header'] = 'value';
+    });
 
-document.body.addEventListener('htmx:beforeSwap', function(event) {
-    // Handle error responses
-    if (event.detail.xhr.status === 404) {
-        console.error('Resource not found');
-        event.detail.shouldSwap = false;
-        showToast('Error: Resource not found', 'error');
-    } else if (event.detail.xhr.status === 400) {
-        console.error('Bad request:', event.detail.xhr.responseText);
-        event.detail.shouldSwap = false;
-        try {
-            const response = JSON.parse(event.detail.xhr.responseText);
-            showToast(response.detail || 'Invalid request', 'error');
-        } catch (e) {
-            showToast('Invalid request', 'error');
-        }
-    } else if (event.detail.xhr.status >= 500) {
-        console.error('Server error');
-        event.detail.shouldSwap = false;
-        showToast('Server error. Please try again.', 'error');
-    }
-});
-
-document.body.addEventListener('htmx:beforeRequest', function(event) {
-    console.log('HTMX request starting:', event.detail.pathInfo.requestPath);
-});
-
-document.body.addEventListener('htmx:afterRequest', function(event) {
-    console.log('HTMX request complete:', {
-        path: event.detail.pathInfo.requestPath,
-        status: event.detail.xhr.status,
-        headers: {
-            'HX-Redirect': event.detail.xhr.getResponseHeader('HX-Redirect')
+    document.body.addEventListener('htmx:beforeSwap', function(event) {
+        // Handle error responses
+        if (event.detail.xhr.status === 404) {
+            console.error('Resource not found');
+            event.detail.shouldSwap = false;
+            showToast('Error: Resource not found', 'error');
+        } else if (event.detail.xhr.status === 400) {
+            console.error('Bad request:', event.detail.xhr.responseText);
+            event.detail.shouldSwap = false;
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                showToast(response.detail || 'Invalid request', 'error');
+            } catch (e) {
+                showToast('Invalid request', 'error');
+            }
+        } else if (event.detail.xhr.status >= 500) {
+            console.error('Server error');
+            event.detail.shouldSwap = false;
+            showToast('Server error. Please try again.', 'error');
         }
     });
 
-    // Log successful requests in development
-    if (event.detail.successful) {
-        console.log('Request successful');
-    }
+    document.body.addEventListener('htmx:beforeRequest', function(event) {
+        console.log('HTMX request starting:', event.detail.pathInfo.requestPath);
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        console.log('HTMX request complete:', {
+            path: event.detail.pathInfo.requestPath,
+            status: event.detail.xhr.status,
+            headers: {
+                'HX-Redirect': event.detail.xhr.getResponseHeader('HX-Redirect')
+            }
+        });
+
+        // Log successful requests in development
+        if (event.detail.successful) {
+            console.log('Request successful');
+        }
+    });
 });
 
 // Toast notification helper

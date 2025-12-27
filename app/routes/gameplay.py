@@ -100,10 +100,114 @@ async def start_voting(game_id: str, player_id: str = Query(...)):
     # Transition to voting
     transition_to_voting(game)
 
+    # Set voting start timestamp if timer configured
+    if game.voting_timer_seconds is not None:
+        from datetime import datetime
+
+        game.voting_started_at = datetime.now()
+        print(f"⏱️ Starting timer: {game.voting_timer_seconds}s at {game.voting_started_at}")
+    else:
+        print("⏱️ No timer configured (voting_timer_seconds is None)")
+
     # Broadcast state update
     await game.broadcast_state()
 
-    return {"status": "voting_started"}
+    return {"status": "voting_started", "timer_seconds": game.voting_timer_seconds}
+
+
+@router.get("/api/games/{game_id}/timer")
+async def get_timer(request: Request, game_id: str, player_id: str = Query(...)):
+    """Get voting timer HTML (polled by HTMX every second).
+
+    Args:
+        request: The FastAPI request object
+        game_id: The game session ID
+        player_id: The player's ID
+
+    Returns:
+        Rendered timer HTML snippet
+    """
+    game = game_manager.get_game(game_id)
+
+    if not game:
+        # Return empty div if game not found
+        return templates.TemplateResponse(
+            "partials/timer.html",
+            {
+                "request": request,
+                "show_timer": False,
+                "expired": False,
+                "game_id": game_id,
+                "player_id": player_id,
+            },
+        )
+
+    player = game.players.get(player_id)
+    if not player or not player.is_alive:
+        # Dead players don't see timer
+        return templates.TemplateResponse(
+            "partials/timer.html",
+            {
+                "request": request,
+                "show_timer": False,
+                "expired": False,
+                "game_id": game_id,
+                "player_id": player_id,
+            },
+        )
+
+    # Check if in voting state with timer
+    if game.state != GameState.VOTING or not game.voting_timer_seconds:
+        return templates.TemplateResponse(
+            "partials/timer.html",
+            {
+                "request": request,
+                "show_timer": False,
+                "expired": False,
+                "game_id": game_id,
+                "player_id": player_id,
+            },
+        )
+
+    # Calculate time remaining
+    time_remaining = game.get_voting_time_remaining()
+
+    # Check if timer expired
+    if time_remaining == 0:
+        # End voting without elimination
+        print("⏱️ Voting timer expired!")
+        transition_to_playing(game)
+        await game.broadcast_state()
+
+        return templates.TemplateResponse(
+            "partials/timer.html",
+            {
+                "request": request,
+                "show_timer": False,
+                "expired": True,
+                "game_id": game_id,
+                "player_id": player_id,
+            },
+        )
+
+    # Show countdown (time_remaining is guaranteed to be > 0 here)
+    assert time_remaining is not None and time_remaining > 0
+    minutes = time_remaining // 60
+    seconds = time_remaining % 60
+
+    return templates.TemplateResponse(
+        "partials/timer.html",
+        {
+            "request": request,
+            "show_timer": True,
+            "expired": False,
+            "time_remaining": time_remaining,
+            "minutes": minutes,
+            "seconds": f"{seconds:02d}",  # Zero-pad seconds
+            "game_id": game_id,
+            "player_id": player_id,
+        },
+    )
 
 
 @router.post("/api/games/{game_id}/vote")

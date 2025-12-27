@@ -12,6 +12,7 @@ class GameWebSocket {
         this.maxReconnectAttempts = 10;
         this.reconnectDelay = 1000; // Start with 1 second
         this.isConnecting = false;
+        this.previousState = null; // Track previous state to detect transitions
 
         console.log(`🎮 Initializing WebSocket for game ${gameId}, player ${playerId}`);
         this.connect();
@@ -47,13 +48,16 @@ class GameWebSocket {
             };
 
             this.ws.onmessage = (event) => {
-                console.log('📨 WebSocket message received:', event.data);
+                // Skip logging for timer updates to reduce console noise
+                if (!event.data.includes('timer_update')) {
+                    console.log('📨 WebSocket message received:', event.data);
+                }
 
                 try {
                     const message = JSON.parse(event.data);
-                    console.log('📦 Parsed message:', message);
 
                     if (message.type === 'state_update') {
+                        console.log('📦 Parsed state update:', message);
                         this.handleStateUpdate(message.data);
                     }
                 } catch (error) {
@@ -212,8 +216,9 @@ class GameWebSocket {
                 if (votingArea) votingArea.style.display = 'block';
                 if (spectatorMessage) spectatorMessage.style.display = 'none';
 
-                // Update vote buttons with current alive players
-                if (typeof updateVoteButtons === 'function' && state.players) {
+                // Only update vote buttons when transitioning to voting (not on every timer tick)
+                const isTransitionToVoting = !this.previousState || this.previousState !== 'voting';
+                if (isTransitionToVoting && typeof updateVoteButtons === 'function' && state.players) {
                     updateVoteButtons(state.players, state.game_id, state.your_id);
                 }
 
@@ -259,6 +264,9 @@ class GameWebSocket {
             console.log('🏁 Game finished! Redirecting to results page...');
             window.location.href = `/game/${state.game_id}/results?player_id=${state.your_id}`;
         }
+
+        // Save current state for next update (to detect transitions)
+        this.previousState = state.state;
     }
 
     showConnectionStatus(status) {
