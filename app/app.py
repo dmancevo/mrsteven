@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from core.game_manager import game_manager
+from middleware import RateLimitMiddleware
 from routes import game, gameplay, lobby, websocket
 
 
@@ -31,6 +32,7 @@ app = FastAPI(
 )
 
 # Configure CORS for development
+# Note: type ignore needed due to Starlette's middleware type stub limitations
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=["*"],
@@ -38,6 +40,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add rate limiting middleware
+# Note: type ignore needed due to Starlette's middleware type stub limitations
+app.add_middleware(RateLimitMiddleware)  # type: ignore[arg-type]
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
