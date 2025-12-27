@@ -1,9 +1,12 @@
 """Routes for lobby management."""
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from core.auth import get_token_data, verify_token_matches
 from core.game_manager import game_manager
 from services.game_state import can_start_game
 
@@ -12,20 +15,29 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/game/{game_id}/lobby")
-async def show_lobby(request: Request, game_id: str, player_id: str = Query(...)):
+async def show_lobby(
+    request: Request,
+    game_id: str,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Show the lobby page with player list and start button.
 
     Args:
         request: The FastAPI request object
         game_id: The game session ID
         player_id: The player's ID (from query param)
+        token_data: Authenticated token data (injected)
 
     Returns:
         Rendered lobby page template
 
     Raises:
-        HTTPException: If game or player not found
+        HTTPException: If game or player not found or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -41,9 +53,9 @@ async def show_lobby(request: Request, game_id: str, player_id: str = Query(...)
     share_url = str(request.base_url).rstrip("/") + f"/game/{game_id}/join"
 
     return templates.TemplateResponse(
-        "lobby.html",
-        {
-            "request": request,
+        request=request,
+        name="lobby.html",
+        context={
             "game": game,
             "player": player,
             "player_id": player_id,
@@ -55,7 +67,12 @@ async def show_lobby(request: Request, game_id: str, player_id: str = Query(...)
 
 
 @router.post("/api/games/{game_id}/start")
-async def start_game(game_id: str, response: Response, player_id: str = Query(...)):
+async def start_game(
+    game_id: str,
+    response: Response,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Start the game (assign roles and transition to playing).
 
     Only callable by the host.
@@ -64,13 +81,17 @@ async def start_game(game_id: str, response: Response, player_id: str = Query(..
         game_id: The game session ID
         player_id: The player's ID (must be host)
         response: FastAPI response object
+        token_data: Authenticated token data (injected)
 
     Returns:
         Success message with redirect header
 
     Raises:
-        HTTPException: If validation fails
+        HTTPException: If validation fails or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -98,20 +119,29 @@ async def start_game(game_id: str, response: Response, player_id: str = Query(..
 
 
 @router.post("/api/games/{game_id}/set-timer")
-async def set_timer(game_id: str, request: Request, player_id: str = Query(...)):
+async def set_timer(
+    game_id: str,
+    request: Request,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Set voting timer for all rounds (host only).
 
     Args:
         game_id: The game session ID
         request: Request with timer_seconds in JSON body
         player_id: The player's ID (must be host)
+        token_data: Authenticated token data (injected)
 
     Returns:
         Success message
 
     Raises:
-        HTTPException: If validation fails
+        HTTPException: If validation fails or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:

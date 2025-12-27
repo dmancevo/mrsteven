@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Form, HTTPException, Request, Response
 from fastapi.templating import Jinja2Templates
 
+from core.auth import generate_player_token, get_secret_key
 from core.game_manager import game_manager
 
 router = APIRouter()
@@ -46,7 +47,9 @@ async def show_join_page(request: Request, game_id: str):
     if game.state.value != "lobby":
         raise HTTPException(status_code=400, detail="Game has already started")
 
-    return templates.TemplateResponse("join.html", {"request": request, "game_id": game_id})
+    return templates.TemplateResponse(
+        request=request, name="join.html", context={"game_id": game_id}
+    )
 
 
 @router.post("/api/games/{game_id}/join")
@@ -83,6 +86,20 @@ async def join_game(game_id: str, response: Response, nickname: str = Form(...))
 
     # Add player
     player = game.add_player(nickname)
+
+    # Generate authentication token
+    secret_key = get_secret_key()
+    token = generate_player_token(game_id, player.id, secret_key)
+
+    # Set authentication cookie (HTTP-only for security)
+    # Use player_id in cookie name to avoid collision when testing multiple players in same browser
+    response.set_cookie(
+        key=f"player_token_{player.id}",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=86400,  # 24 hours
+    )
 
     # Broadcast update to all connected players
     await game.broadcast_state()

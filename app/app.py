@@ -1,5 +1,6 @@
 """Main FastAPI application for Dragonseeker game."""
 
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -17,6 +18,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     print("🐉 Dragonseeker game server starting...")
+
+    # Generate secret key for token signing (in memory, rotates on restart)
+    app.state.secret_key = secrets.token_hex(32)
+    print("🔐 Generated secret key for token signing")
+
     print("🔗 Game manager initialized")
     yield
     # Shutdown
@@ -61,7 +67,7 @@ app.include_router(websocket.router, tags=["websocket"])
 @app.get("/")
 async def index(request: Request):
     """Landing page - create new game."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.get("/health")

@@ -1,9 +1,12 @@
 """Routes for active gameplay (voting, guessing, etc.)."""
 
-from fastapi import APIRouter, Form, HTTPException, Query, Request, Response
+from typing import Any
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from core.auth import get_token_data, verify_token_matches
 from core.game_manager import game_manager
 from core.game_session import GameState
 from core.roles import Role
@@ -21,20 +24,29 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/game/{game_id}/play")
-async def show_game(request: Request, game_id: str, player_id: str = Query(...)):
+async def show_game(
+    request: Request,
+    game_id: str,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Show the active game interface.
 
     Args:
         request: The FastAPI request object
         game_id: The game session ID
         player_id: The player's ID
+        token_data: Authenticated token data (injected)
 
     Returns:
         Rendered game page template or redirect
 
     Raises:
-        HTTPException: If game or player not found
+        HTTPException: If game or player not found or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -62,13 +74,18 @@ async def show_game(request: Request, game_id: str, player_id: str = Query(...))
             word = game.villager_word
 
     return templates.TemplateResponse(
-        "game.html",
-        {"request": request, "game": game, "player": player, "player_id": player_id, "word": word},
+        request=request,
+        name="game.html",
+        context={"game": game, "player": player, "player_id": player_id, "word": word},
     )
 
 
 @router.post("/api/games/{game_id}/start-voting")
-async def start_voting(game_id: str, player_id: str = Query(...)):
+async def start_voting(
+    game_id: str,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Transition game to voting phase.
 
     Only callable by the host.
@@ -76,13 +93,17 @@ async def start_voting(game_id: str, player_id: str = Query(...)):
     Args:
         game_id: The game session ID
         player_id: The player's ID (must be host)
+        token_data: Authenticated token data (injected)
 
     Returns:
         Success message
 
     Raises:
-        HTTPException: If validation fails
+        HTTPException: If validation fails or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -119,6 +140,9 @@ async def start_voting(game_id: str, player_id: str = Query(...)):
 async def get_timer(request: Request, game_id: str, player_id: str = Query(...)):
     """Get voting timer HTML (polled by HTMX every second).
 
+    Note: No authentication required for performance (high-frequency polling).
+    Rate limited to 20 req/s and validates player exists/is alive.
+
     Args:
         request: The FastAPI request object
         game_id: The game session ID
@@ -132,9 +156,9 @@ async def get_timer(request: Request, game_id: str, player_id: str = Query(...))
     if not game:
         # Return empty div if game not found
         return templates.TemplateResponse(
-            "partials/timer.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/timer.html",
+            context={
                 "show_timer": False,
                 "expired": False,
                 "game_id": game_id,
@@ -146,9 +170,9 @@ async def get_timer(request: Request, game_id: str, player_id: str = Query(...))
     if not player or not player.is_alive:
         # Dead players don't see timer
         return templates.TemplateResponse(
-            "partials/timer.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/timer.html",
+            context={
                 "show_timer": False,
                 "expired": False,
                 "game_id": game_id,
@@ -159,9 +183,9 @@ async def get_timer(request: Request, game_id: str, player_id: str = Query(...))
     # Check if in voting state with timer
     if game.state != GameState.VOTING or not game.voting_timer_seconds:
         return templates.TemplateResponse(
-            "partials/timer.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/timer.html",
+            context={
                 "show_timer": False,
                 "expired": False,
                 "game_id": game_id,
@@ -180,9 +204,9 @@ async def get_timer(request: Request, game_id: str, player_id: str = Query(...))
         await game.broadcast_state()
 
         return templates.TemplateResponse(
-            "partials/timer.html",
-            {
-                "request": request,
+            request=request,
+            name="partials/timer.html",
+            context={
                 "show_timer": False,
                 "expired": True,
                 "game_id": game_id,
@@ -196,9 +220,9 @@ async def get_timer(request: Request, game_id: str, player_id: str = Query(...))
     seconds = time_remaining % 60
 
     return templates.TemplateResponse(
-        "partials/timer.html",
-        {
-            "request": request,
+        request=request,
+        name="partials/timer.html",
+        context={
             "show_timer": True,
             "expired": False,
             "time_remaining": time_remaining,
@@ -216,6 +240,7 @@ async def submit_vote(
     response: Response,
     target_id: str = Form(...),
     player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
 ):
     """Submit a vote for player elimination.
 
@@ -223,13 +248,17 @@ async def submit_vote(
         game_id: The game session ID
         vote: The vote request with target player ID
         player_id: The voting player's ID
+        token_data: Authenticated token data (injected)
 
     Returns:
         Vote status or game result
 
     Raises:
-        HTTPException: If validation fails
+        HTTPException: If validation fails or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -292,6 +321,7 @@ async def guess_word(
     response: Response,
     guess: str = Form(...),
     player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
 ):
     """Dragon attempts to guess the secret word after elimination.
 
@@ -300,13 +330,17 @@ async def guess_word(
         guess: The word guess from form data
         player_id: The player's ID (must be dragon)
         response: FastAPI response object
+        token_data: Authenticated token data (injected)
 
     Returns:
         Guess result and winner
 
     Raises:
-        HTTPException: If validation fails
+        HTTPException: If validation fails or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -343,20 +377,29 @@ async def guess_word(
 
 
 @router.get("/game/{game_id}/results")
-async def show_results(request: Request, game_id: str, player_id: str = Query(...)):
+async def show_results(
+    request: Request,
+    game_id: str,
+    player_id: str = Query(...),
+    token_data: dict[str, Any] = Depends(get_token_data),  # noqa: B008
+):
     """Show the game results page.
 
     Args:
         request: The FastAPI request object
         game_id: The game session ID
         player_id: The player's ID
+        token_data: Authenticated token data (injected)
 
     Returns:
         Rendered results page template
 
     Raises:
-        HTTPException: If game or player not found
+        HTTPException: If game or player not found or authentication fails
     """
+    # Verify token matches the requested player
+    verify_token_matches(token_data, game_id, player_id)
+
     game = game_manager.get_game(game_id)
 
     if not game:
@@ -368,9 +411,9 @@ async def show_results(request: Request, game_id: str, player_id: str = Query(..
         raise HTTPException(status_code=403, detail="Not in this game")
 
     return templates.TemplateResponse(
-        "results.html",
-        {
-            "request": request,
+        request=request,
+        name="results.html",
+        context={
             "game": game,
             "player": player,
             "player_id": player_id,

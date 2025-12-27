@@ -2,9 +2,21 @@
 
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import app
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset rate limiter state before each test."""
+    # Clear rate limiter requests between tests
+    from middleware.rate_limiter import _rate_limiter
+
+    _rate_limiter.requests.clear()
+    _rate_limiter.last_cleanup = time.time()
+    yield
 
 
 class TestRateLimiter:
@@ -74,11 +86,12 @@ class TestRateLimiter:
         """Test that rate limits reset after the time window passes."""
         client = TestClient(app)
 
-        # Hit the rate limit
-        for _ in range(6):
-            client.get("/health")
+        # Hit the rate limit (health endpoint has 10 req/s limit)
+        for _ in range(10):
+            response = client.get("/health")
+            assert response.status_code == 200
 
-        # Last request should be rate limited
+        # 11th request should be rate limited
         response = client.get("/health")
         assert response.status_code == 429
 

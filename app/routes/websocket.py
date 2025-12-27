@@ -4,6 +4,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from core.auth import get_secret_key, verify_player_token
 from core.game_manager import game_manager
 
 router = APIRouter()
@@ -27,6 +28,22 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
         6. Remove connection on disconnect
     """
     print(f"🔌 WebSocket connection attempt: game={game_id}, player={player_id}")
+
+    # Authenticate player via cookie (use player-specific cookie name)
+    cookie_name = f"player_token_{player_id}"
+    player_token = websocket.cookies.get(cookie_name)
+    secret_key = get_secret_key()
+    token_data = verify_player_token(player_token, secret_key)
+
+    if not token_data:
+        print(f"❌ Invalid or expired token for player: {player_id}")
+        await websocket.close(code=1008, reason="Invalid or expired authentication token")
+        return
+
+    if token_data["game_id"] != game_id or token_data["player_id"] != player_id:
+        print(f"❌ Token mismatch for player: {player_id}")
+        await websocket.close(code=1008, reason="Authentication token does not match player")
+        return
 
     game = game_manager.get_game(game_id)
 
