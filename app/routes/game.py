@@ -78,7 +78,15 @@ async def join_game(game_id: str, response: Response, nickname: str = Form(...))
     # Validate nickname
     nickname = nickname.strip()
     if not nickname or len(nickname) > 20:
-        raise HTTPException(status_code=400, detail="Invalid nickname")
+        raise HTTPException(status_code=400, detail="Invalid nickname (max 20 characters)")
+
+    # Validate characters (alphanumeric, spaces, and common punctuation only)
+    # Prevents control characters, zero-width spaces, and confusing Unicode
+    if not all(c.isalnum() or c.isspace() or c in ".,!?'-_" for c in nickname):
+        raise HTTPException(
+            status_code=400,
+            detail="Nickname contains invalid characters",
+        )
 
     # Check for duplicate nicknames
     if any(p.nickname.lower() == nickname.lower() for p in game.players.values()):

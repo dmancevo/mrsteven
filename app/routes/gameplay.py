@@ -357,8 +357,17 @@ async def guess_word(
     if not game.villager_word:
         raise HTTPException(status_code=500, detail="Game state error: word not set")
 
-    # Clean and check if guess is correct (check against villager word)
+    # Clean and validate guess
     guess = guess.strip().lower()
+
+    # Validate guess length (word pairs are typically < 20 chars)
+    if len(guess) > 50:
+        raise HTTPException(status_code=400, detail="Guess too long (max 50 characters)")
+
+    if not guess:
+        raise HTTPException(status_code=400, detail="Guess cannot be empty")
+
+    # Check if guess is correct (check against villager word)
     correct = guess == game.villager_word.lower()
 
     # Set winner
